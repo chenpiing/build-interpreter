@@ -90,11 +90,15 @@ public class Scanner {
                 line++;
                 break;
             case '"': string(); break;
-            case 'o':
-                if (peek() == 'r') {
+            case '|':
+                if (peek() == '|') {
                     addToken(TokenType.OR);
                 }
                 break;
+            case '&':
+                if (peek() == '&') {
+                    addToken(TokenType.AND);
+                }
             default:
                 if (isDigit(c)) {
                     number();
