@@ -1,4 +1,4 @@
-package io.jesla;
+package io.jesla.model;
 
 public class Token {
     final TokenType type;
