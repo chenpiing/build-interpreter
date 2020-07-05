@@ -1,4 +1,6 @@
-package io.jesla;
+package io.jesla.model;
+
+import io.jesla.model.error.RuntimeError;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,6 +13,9 @@ import java.util.List;
 public class Jesla {
 
     static boolean hadError = false;
+    static boolean hadRuntimeError = false;
+
+    private static final Interpreter interpreter = new Interpreter();
 
     public static void main(String[] args) throws IOException {
         if (args.length > 1) {
@@ -26,11 +31,11 @@ public class Jesla {
     private static void runPrompt() throws IOException {
         InputStreamReader input = new InputStreamReader(System.in);
         BufferedReader reader = new BufferedReader(input);
-
+        System.out.println("please enter an expression");
         while(true) {
             System.out.print("> ");
             String line = reader.readLine();
-            if (line == null) break;
+            if (line == null || line.trim().length() == 0) continue;
             run(line);
             hadError = false;
         }
@@ -41,20 +46,45 @@ public class Jesla {
         run(new String(bytes, Charset.defaultCharset()));
 
         if (hadError) System.exit(65);
+        if (hadRuntimeError) System.exit(70);
     }
 
     private static void run(String source) {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
 
+        Parser parser = new Parser(tokens);
+        List<Stmt> statements = parser.parse();
+
+        // Stop if there was a syntax error.
+        if (hadError) return;
+
+        interpreter.interpret(statements);
+
+//        System.out.println(new AstPrinter().print(expression));
+
         // For now, just print the tokens.
-        for (Token token : tokens) {
-            System.out.println(token);
-        }
+//        for (Token token : tokens) {
+//            System.out.println(token);
+//        }
     }
 
     static void error(int line, String message) {
         report(line, "", message);
+    }
+
+    static void error(Token token, String message) {
+        if (token.type == TokenType.EOF) {
+            report(token.line, " at end", message);
+        } else {
+            report(token.line, " at '" + token.lexeme + "'", message);
+        }
+    }
+
+    static void runtimeError(RuntimeError error) {
+        System.err.println(error.getMessage() +
+                "\n[line " + error.getToken().line + "]");
+        hadRuntimeError = true;
     }
 
     private static void report(int line, String where, String message) {
