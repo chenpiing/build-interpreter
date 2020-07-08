@@ -1,9 +1,6 @@
 package io.jesla.model;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.lang.Character.isDigit;
 
@@ -35,6 +32,7 @@ public class Scanner {
         keywords.put("true",   TokenType.TRUE);
         keywords.put("var",    TokenType.VAR);
         keywords.put("while",  TokenType.WHILE);
+        keywords.put("break", TokenType.BREAK);
     }
 
     Scanner(String source) {
@@ -64,6 +62,7 @@ public class Scanner {
             case '-': addToken(match('=') ? TokenType.MINUS_EQUAL : TokenType.MINUS); break;
             case '+': addToken(match('=') ? TokenType.PLUS_EQUAL : TokenType.PLUS); break;
             case ';': addToken(TokenType.SEMICOLON); break;
+            case ':': addToken(TokenType.COLON); break;
             case '*': addToken(match('=') ? TokenType.STAR_EQUAL : TokenType.STAR); break;
             case '!': addToken(match('=') ? TokenType.BANG_EQUAL : TokenType.BANG); break;
             case '=': addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); break;
@@ -185,7 +184,6 @@ public class Scanner {
     private void identifier() {
         while (isAlphaNumeric(peek())) advance();
         String text = source.substring(start, current);
-
         TokenType type = keywords.get(text);
         if (type == null) type = TokenType.IDENTIFIER;
         addToken(type);

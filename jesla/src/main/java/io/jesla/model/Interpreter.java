@@ -1,10 +1,14 @@
 package io.jesla.model;
 
+import io.jesla.model.constant.StmtConstant;
 import io.jesla.model.error.RuntimeError;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
-public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor, StmtConstant {
 
     private Environment environment = new Environment();
 
@@ -110,39 +114,42 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
-    public Void visitBlockStmt(Stmt.Block stmt) {
-        executeBlock(stmt.statements, new Environment(environment));
-        return null;
+    public Map<String, Object> visitBlockStmt(Stmt.Block stmt) {
+        return executeBlock(stmt.statements, new Environment(environment));
     }
 
-    private void executeBlock(List<Stmt> statements, Environment environment) {
+    private Map<String, Object> executeBlock(List<Stmt> statements, Environment environment) {
         Environment previous = this.environment;
         try {
             this.environment = environment;
 
             for (Stmt statement : statements) {
-                execute(statement);
+                Map<String, Object> result = execute(statement);
+                if (result != null && result.containsKey(RESULT_KEY_LOOP_BREAK)) {
+                    return result;
+                }
             }
+            return null;
         } finally {
             this.environment = previous;
         }
     }
 
     @Override
-    public Void visitExpressionStmt(Stmt.Expression stmt) {
+    public Map<String, Object> visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
         return null;
     }
 
     @Override
-    public Void visitPrintStmt(Stmt.Print stmt) {
+    public Map<String, Object> visitPrintStmt(Stmt.Print stmt) {
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
         return null;
     }
 
     @Override
-    public Void visitVarStmt(Stmt.Var stmt) {
+    public Map<String, Object> visitVarStmt(Stmt.Var stmt) {
         Object value = null;
         if (stmt.initializer != null) {
             value = evaluate(stmt.initializer);
@@ -153,19 +160,40 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
-    public Void visitWhileStmt(Stmt.While stmt) {
-        while (isTruthy(evaluate(stmt.condition))) {
-            execute(stmt.body);
+    public Map<String, Object> visitForStmt(Stmt.For stmt) {
+        execute(stmt.initializer);
+        while (stmt.condition == null || isTruthy(evaluate(stmt.condition))) {
+            Map<String, Object> result = execute(stmt.body);
+            if (result != null && result.containsKey(RESULT_KEY_LOOP_BREAK)) {
+                Object tag = result.getOrDefault(RESULT_KEY_LOOP_BREAK_TAG, "");
+                if (Objects.equals(tag, stmt.tag)) {
+                    return null;
+                } else {
+                    Map<String, Object> resp = new HashMap<>();
+                    resp.put(RESULT_KEY_LOOP_BREAK, true);
+                    resp.put(RESULT_KEY_LOOP_BREAK_TAG, tag);
+                    return resp;
+                }
+            }
+            execute(stmt.increment);
         }
         return null;
     }
 
     @Override
-    public Void visitIfStmt(Stmt.If stmt) {
+    public Map<String, Object> visitBreakStmt(Stmt.Break stmt) {
+        Map<String, Object> resp = new HashMap<>();
+        resp.put(RESULT_KEY_LOOP_BREAK, true);
+        resp.put(RESULT_KEY_LOOP_BREAK_TAG, stmt.flag);
+        return resp;
+    }
+
+    @Override
+    public Map<String, Object> visitIfStmt(Stmt.If stmt) {
         if (isTruthy(evaluate(stmt.condition))) {
-            execute(stmt.thenBranch);
+            return execute(stmt.thenBranch);
         } else if (stmt.elseBranch != null) {
-            execute(stmt.elseBranch);
+            return execute(stmt.elseBranch);
         }
         return null;
     }
@@ -180,8 +208,10 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         }
     }
 
-    private void execute(Stmt stmt) {
-        stmt.accept(this);
+    private Map<String, Object> execute(Stmt stmt) {
+        if (stmt == null)
+            return null;
+        return stmt.accept(this);
     }
 
     private void checkDividend(Token token, Object right) {

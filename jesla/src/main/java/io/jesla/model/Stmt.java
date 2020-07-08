@@ -1,23 +1,26 @@
 package io.jesla.model;
 
 import java.util.List;
+import java.util.Map;
 
 abstract class Stmt {
-    interface Visitor<R> {
-        R visitBlockStmt(Block stmt);
+    interface Visitor {
+        Map<String, Object> visitBlockStmt(Block stmt);
 
-        R visitExpressionStmt(Expression stmt);
+        Map<String, Object> visitExpressionStmt(Expression stmt);
 
-        R visitIfStmt(If stmt);
+        Map<String, Object> visitIfStmt(If stmt);
 
-        R visitPrintStmt(Print stmt);
+        Map<String, Object> visitPrintStmt(Print stmt);
 
-        R visitVarStmt(Var stmt);
+        Map<String, Object> visitVarStmt(Var stmt);
 
-        R visitWhileStmt(While stmt);
+        Map<String, Object> visitForStmt(For stmt);
+
+        Map<String, Object> visitBreakStmt(Break stmt);
     }
 
-    abstract <R> R accept(Visitor<R> visitor);
+    abstract Map<String, Object> accept(Visitor visitor);
 
 
     static class Block extends Stmt {
@@ -29,7 +32,7 @@ abstract class Stmt {
         }
 
         @Override
-        <R> R accept(Visitor<R> visitor) {
+        Map<String, Object> accept(Visitor visitor) {
             return visitor.visitBlockStmt(this);
         }
     }
@@ -43,7 +46,7 @@ abstract class Stmt {
         }
 
         @Override
-        <R> R accept(Visitor<R> visitor) {
+        Map<String, Object> accept(Visitor visitor) {
             return visitor.visitExpressionStmt(this);
         }
     }
@@ -61,7 +64,7 @@ abstract class Stmt {
         }
 
         @Override
-        <R> R accept(Visitor<R> visitor) {
+        Map<String, Object> accept(Visitor visitor) {
             return visitor.visitIfStmt(this);
         }
     }
@@ -75,7 +78,7 @@ abstract class Stmt {
         }
 
         @Override
-        <R> R accept(Visitor<R> visitor) {
+        Map<String, Object> accept(Visitor visitor) {
             return visitor.visitPrintStmt(this);
         }
     }
@@ -91,26 +94,54 @@ abstract class Stmt {
         }
 
         @Override
-        <R> R accept(Visitor<R> visitor) {
+        Map<String, Object> accept(Visitor visitor) {
             return visitor.visitVarStmt(this);
         }
     }
 
-    static class While extends Stmt {
-
+    static class For extends Stmt {
+        final Stmt initializer;
         final Expr condition;
         final Stmt body;
-        Boolean isBreak;
+        final Stmt increment;
+        final String tag;
 
-        public While(Expr condition, Stmt body) {
+        public For(Stmt initializer, Expr condition, Stmt body, Stmt increment) {
+            this.initializer = initializer;
             this.condition = condition;
             this.body = body;
-            isBreak = false;
+            this.increment = increment;
+            this.tag = "";
+        }
+
+        public For(Stmt initializer, Expr condition, Stmt body, Stmt increment, String tag) {
+            this.initializer = initializer;
+            this.condition = condition;
+            this.body = body;
+            this.increment = increment;
+            this.tag = tag == null ? "" : tag.trim();
         }
 
         @Override
-        <R> R accept(Visitor<R> visitor) {
-            return visitor.visitWhileStmt(this);
+        Map<String, Object> accept(Visitor visitor) {
+            return visitor.visitForStmt(this);
+        }
+    }
+
+    static class Break extends Stmt {
+        final String flag;
+
+        public Break() {
+            flag = "";
+        }
+
+        public Break(String flag) {
+            this.flag = flag == null ? "" : flag.trim();
+        }
+
+        @Override
+        Map<String, Object> accept(Visitor visitor) {
+            return visitor.visitBreakStmt(this);
         }
     }
 }
