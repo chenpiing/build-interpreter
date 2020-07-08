@@ -53,13 +53,42 @@ public class Parser {
         if (match(IF)) return ifStatement();
         if (match(PRINT)) return printStatement();
         if (match(LEFT_BRACE)) return new Stmt.Block(block());
-        if (match(WHILE)) return whileStatement();
-        if (match(FOR)) return forStatement();
+        if (match(WHILE)) return whileStatement("");
+        if (match(FOR)) return forStatement("");
+        if (match(BREAK)) return breakStatement();
+        if (check(IDENTIFIER, COLON)) return loopFlagStatement();
 
         return expressionStatement();
     }
 
-    private Stmt forStatement() {
+    /**
+     * loop statement begin with
+     * @return
+     */
+    private Stmt loopFlagStatement() {
+        Token flagToken = consume(IDENTIFIER, "Expect identifier.");
+        String flag = flagToken.lexeme;
+        consume(COLON, String.format("Expect ':' after '%s'.", flag));
+        if (match(WHILE))
+            return whileStatement(flag);
+        else if (match(FOR))
+            return forStatement(flag);
+        throw error(flagToken, "Invalid loop statement!");
+    }
+
+    private Stmt breakStatement() {
+        if (check(SEMICOLON)) {
+            consume(SEMICOLON, "Expect ';' after 'break'.");
+            return new Stmt.Break();
+        } else if (check(IDENTIFIER)) {
+            Token flagToken = consume(IDENTIFIER, "Expect identifier after break.");
+            consume(SEMICOLON, "Expect ';' after 'break'.");
+            return new Stmt.Break(flagToken.lexeme);
+        }
+        throw error(peek(), "Invalid break statement!");
+    }
+
+    private Stmt forStatement(String flag) {
         consume(LEFT_PAREN, "Expect '(' after 'for'.");
         Stmt initializer;
         if (match(SEMICOLON)) {
@@ -84,30 +113,15 @@ public class Parser {
 
         Stmt body = statement();
 
-        // execute body one time, and then execute increment one time
-        if (increment != null) {
-            body = new Stmt.Block(Arrays.asList(
-                    body,
-                    new Stmt.Expression(increment)));
-        }
-
-        if (condition == null) condition = new Expr.Literal(true);
-        body = new Stmt.While(condition, body);
-
-        if (initializer != null) {
-            body = new Stmt.Block(Arrays.asList(initializer, body));
-        }
-
-        return body;
+        return new Stmt.For(initializer, condition, body, new Stmt.Expression(increment), flag);
     }
 
-    private Stmt whileStatement() {
+    private Stmt whileStatement(String flag) {
         consume(LEFT_PAREN, "Expect '(' after 'while'.");
         Expr condition = expression();
         consume(RIGHT_PAREN, "Expect ')' after condition.");
         Stmt body = statement();
-
-        return new Stmt.While(condition, body);
+        return new Stmt.For(null, condition, body, null, flag);
     }
 
     private Stmt ifStatement() {
@@ -334,6 +348,13 @@ public class Parser {
     private boolean check(TokenType type) {
         if (isAtEnd()) return false;
         return peek().type == type;
+    }
+
+    /**
+     * check whether the two forthcoming token type match the given type
+     */
+    private boolean check(TokenType first, TokenType second) {
+        return (current < tokens.size() - 1) && check(first) && tokens.get(current + 1).type == second;
     }
 
     /**
