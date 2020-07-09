@@ -56,6 +56,7 @@ public class Parser {
         if (match(WHILE)) return whileStatement("");
         if (match(FOR)) return forStatement("");
         if (match(BREAK)) return breakStatement();
+        if (match(CONTINUE)) return continueStatement();
         if (check(IDENTIFIER, COLON)) return loopFlagStatement();
 
         return expressionStatement();
@@ -86,6 +87,18 @@ public class Parser {
             return new Stmt.Break(flagToken.lexeme);
         }
         throw error(peek(), "Invalid break statement!");
+    }
+
+    private Stmt continueStatement() {
+        if (check(SEMICOLON)) {
+            consume(SEMICOLON, "Expect ';' after 'continue'.");
+            return new Stmt.Continue();
+        } else if (check(IDENTIFIER)) {
+            Token flagToken = consume(IDENTIFIER, "Expect identifier after continue.");
+            consume(SEMICOLON, "Expect ';' after 'continue'.");
+            return new Stmt.Continue(flagToken.lexeme);
+        }
+        throw error(peek(), "Invalid continue statement!");
     }
 
     private Stmt forStatement(String flag) {

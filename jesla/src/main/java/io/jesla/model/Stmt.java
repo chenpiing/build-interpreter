@@ -18,6 +18,8 @@ abstract class Stmt {
         Map<String, Object> visitForStmt(For stmt);
 
         Map<String, Object> visitBreakStmt(Break stmt);
+
+        Map<String, Object> visitContinueStmt(Continue stmt);
     }
 
     abstract Map<String, Object> accept(Visitor visitor);
@@ -142,6 +144,24 @@ abstract class Stmt {
         @Override
         Map<String, Object> accept(Visitor visitor) {
             return visitor.visitBreakStmt(this);
+        }
+    }
+
+    static class Continue extends Stmt {
+        final String flag;
+
+        public Continue(){
+            this.flag = "";
+        }
+
+        public Continue(String flag) {
+            this.flag = flag == null ? "": flag.trim();
+        }
+
+
+        @Override
+        Map<String, Object> accept(Visitor visitor) {
+            return visitor.visitContinueStmt(this);
         }
     }
 }

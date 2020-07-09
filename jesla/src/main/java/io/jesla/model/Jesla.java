@@ -9,6 +9,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 
 public class Jesla {
 
@@ -36,6 +37,7 @@ public class Jesla {
             System.out.print("> ");
             String line = reader.readLine();
             if (line == null || line.trim().length() == 0) continue;
+            if (Objects.equals(line, "exit")) break;
             run(line);
             hadError = false;
         }
@@ -60,13 +62,6 @@ public class Jesla {
         if (hadError) return;
 
         interpreter.interpret(statements);
-
-//        System.out.println(new AstPrinter().print(expression));
-
-        // For now, just print the tokens.
-//        for (Token token : tokens) {
-//            System.out.println(token);
-//        }
     }
 
     static void error(int line, String message) {
