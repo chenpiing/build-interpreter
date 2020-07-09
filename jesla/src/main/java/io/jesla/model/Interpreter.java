@@ -125,7 +125,8 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor, StmtCons
 
             for (Stmt statement : statements) {
                 Map<String, Object> result = execute(statement);
-                if (result != null && result.containsKey(RESULT_KEY_LOOP_BREAK)) {
+                if (result != null && (result.containsKey(RESULT_KEY_LOOP_BREAK)
+                        || result.containsKey(RESULT_KEY_LOOP_CONTINUE))) {
                     return result;
                 }
             }
@@ -166,14 +167,14 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor, StmtCons
             Map<String, Object> result = execute(stmt.body);
             if (result != null && result.containsKey(RESULT_KEY_LOOP_BREAK)) {
                 Object tag = result.getOrDefault(RESULT_KEY_LOOP_BREAK_TAG, "");
-                if (Objects.equals(tag, stmt.tag)) {
-                    return null;
-                } else {
-                    Map<String, Object> resp = new HashMap<>();
-                    resp.put(RESULT_KEY_LOOP_BREAK, true);
-                    resp.put(RESULT_KEY_LOOP_BREAK_TAG, tag);
-                    return resp;
-                }
+                if (!Objects.equals(tag, stmt.tag))
+                    return result;
+                return null;
+            }
+            if (result != null && result.containsKey(RESULT_KEY_LOOP_CONTINUE)) {
+                Object tag = result.getOrDefault(RESULT_KEY_LOOP_CONTINUE_TAG, "");
+                if (!Objects.equals(tag, stmt.tag))
+                    return result;
             }
             execute(stmt.increment);
         }
@@ -185,6 +186,14 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor, StmtCons
         Map<String, Object> resp = new HashMap<>();
         resp.put(RESULT_KEY_LOOP_BREAK, true);
         resp.put(RESULT_KEY_LOOP_BREAK_TAG, stmt.flag);
+        return resp;
+    }
+
+    @Override
+    public Map<String, Object> visitContinueStmt(Stmt.Continue stmt) {
+        Map<String, Object> resp = new HashMap<>();
+        resp.put(RESULT_KEY_LOOP_CONTINUE, true);
+        resp.put(RESULT_KEY_LOOP_CONTINUE_TAG, stmt.flag);
         return resp;
     }
 
